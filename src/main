@@ -1,0 +1,70 @@
+import threading
+
+from icalendar import Calendar
+from datetime import datetime
+import csv
+import webbrowser
+import pyautogui
+import time
+
+
+class Lecture:
+    link = ""
+    password = ""
+
+    def __init__(self, summary, start, end):
+        self.summary = summary
+        self.start = start
+        self.end = end
+
+
+def get_todays_lectures():
+    # Open iCal-File and import calendar
+    f = open('C:\\Users\\eike\\Downloads\\dhbwcal.ics', 'rb')
+    cal = Calendar.from_ical(f.read())
+    today = datetime.now().date()
+    today_vl = [Lecture(e["summary"], e["dtstart"].dt, e["dtend"].dt) for e in cal.walk('vevent') if
+                e['dtstart'].dt.date() == today]
+    # print(today_vl)
+    return assign_links(today_vl)
+
+
+def assign_links(today_vl):
+    with open('../data/links.csv') as file:
+        csv_reader = csv.DictReader(file, delimiter=";")
+        # today_vl = [vl + [row["Link"], row["Password"]] for row in csv_reader for vl in today_vl if row["Name"] in
+        # vl.summary]
+        for row in csv_reader:
+            for vl in today_vl:
+                if row["Name"] in vl.summary:
+                    vl.link = row["Link"]
+                    vl.password = row["Password"]
+    return today_vl
+
+
+# get today's lectures
+def log_in(vl):
+    webbrowser.open(vl.link)
+    time.sleep(15)  # in case the internet is very slow.
+    # Waiting for time instead of window is easier and doesnt require knowledge of open windows
+    if (vl.password.lower()) != "nopw":
+        pyautogui.write(vl.password)
+        pyautogui.press('tab')
+        pyautogui.press('enter')
+
+
+# returns [vorlesung, zeit bis nächste vorlesung]
+def get_next_vl(today_vl):
+    assigned_next = [[vl, vl.start - datetime.today()] for vl in today_vl]
+    return min(assigned_next, key=lambda x: x[1])
+
+
+if __name__ == '__main__':
+    lectures = get_todays_lectures()
+    while True:
+        next_vl = get_next_vl(lectures)
+        print(next_vl[1], "bis zur nächsten Vorlesung")
+        t = threading.Timer(next_vl[1].total_seconds(), log_in, [next_vl])
+        t.start()
+        t.join()
+
