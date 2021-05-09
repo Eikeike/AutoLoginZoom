@@ -20,7 +20,7 @@ class Lecture:
 
 def get_todays_lectures():
     # Open iCal-File and import calendar
-    f = open('C:\\Users\\eike\\Downloads\\dhbwcal.ics', 'rb')
+    f = open('calendar.ics', 'rb')
     cal = Calendar.from_ical(f.read())
     today = datetime.now().date()
     today_vl = [Lecture(e["summary"], e["dtstart"].dt, e["dtend"].dt) for e in cal.walk('vevent') if
